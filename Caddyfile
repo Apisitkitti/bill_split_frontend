@@ -1,0 +1,105 @@
+# Caddy puts the LIFF app and the API behind one origin.
+#
+# Two things fall out of that, and they are the reason this file exists:
+#
+#   1. CORS stops being involved. Same origin, no preflight, no
+#      ALLOWED_ORIGINS to keep in sync with a tunnel URL that changes every
+#      time you restart it.
+#   2. One tunnel instead of two. Without this, dev needs a tunnel for the
+#      frontend AND a second one for the API, because inside LINE's in-app
+#      browser `localhost` means the phone, not your Mac.
+#
+# Run:  make proxy   (this file)
+#       cloudflared tunnel --url http://localhost:8443
+#
+# Then set VITE_API_URL to the tunnel URL — the same URL the app is served
+# from — and put that URL in the LIFF app's Endpoint URL.
+{
+	# Quieter than the default for a dev proxy; raise to DEBUG when a route
+	# is not matching.
+	log {
+		level ERROR
+	}
+	# Not `auto_https off`: that switch also stops `tls internal` from issuing
+	# the :8444 certificate below. Only the redirects need disabling — the
+	# :8443 site is deliberately plain HTTP, and Caddy would otherwise bounce
+	# it to HTTPS.
+	auto_https disable_redirects
+}
+
+# ---------------------------------------------------------------------------
+# Development: plain HTTP on :8443, fronted by cloudflared.
+#
+# HTTP is deliberate here. The tunnel terminates TLS with a publicly trusted
+# certificate, which is the only kind LINE's in-app browser will accept. A
+# certificate from Caddy's own internal CA is trusted on this Mac and nowhere
+# else — a phone rejects it — so terminating TLS locally would not help.
+# ---------------------------------------------------------------------------
+:8443 {
+	# /api/* to the Go server. handle_path strips nothing: the API's routes
+	# are already mounted under /api, so the prefix must survive.
+	handle /api/* {
+		reverse_proxy localhost:8080
+	}
+
+	# Everything else to the Vite dev server, including its HMR websocket,
+	# which reverse_proxy upgrades on its own.
+	handle {
+		reverse_proxy localhost:5173
+	}
+}
+
+# ---------------------------------------------------------------------------
+# Local HTTPS on :8444, for testing in desktop Chrome only.
+#
+# `tls internal` issues from Caddy's own CA. Run `caddy trust` once to add it
+# to the macOS keychain. This is useful for exercising anything that requires a
+# secure context on the desktop; it is NOT a route to testing on a phone.
+# ---------------------------------------------------------------------------
+https://localhost:8444 {
+	tls internal
+
+	handle /api/* {
+		reverse_proxy localhost:8080
+	}
+
+	handle {
+		reverse_proxy localhost:5173
+	}
+}
+
+# ---------------------------------------------------------------------------
+# Production. Replace the placeholder with a real domain whose DNS points at
+# this host, and Caddy obtains and renews a Let's Encrypt certificate on its
+# own — no certbot, no cron, no renewal to forget.
+#
+# The frontend is served as static files here rather than proxied: `bun run
+# build` output, not a dev server.
+# ---------------------------------------------------------------------------
+# billsplit.example.com {
+# 	handle /api/* {
+# 		reverse_proxy localhost:8080
+# 	}
+#
+# 	handle {
+# 		root * /srv/billsplit/dist
+# 		try_files {path} /index.html
+# 		file_server
+#
+# 		# The app is a single HTML shell plus hashed assets. The shell must
+# 		# never be cached or a deploy leaves phones on the old bundle;
+# 		# the hashed assets can be cached forever.
+# 		@assets path /assets/*
+# 		header @assets Cache-Control "public, max-age=31536000, immutable"
+# 		header /index.html Cache-Control "no-cache"
+# 	}
+#
+# 	encode gzip zstd
+#
+# 	header {
+# 		# LIFF loads this page inside an iframe-like WebView, so no
+# 		# X-Frame-Options DENY here — it would break the app.
+# 		Referrer-Policy strict-origin-when-cross-origin
+# 		X-Content-Type-Options nosniff
+# 	}
+# }

@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  /* One theme, forced. LINE's in-app browser follows the phone's dark mode,
+     and a bill list that flips colours mid-session reads as a bug. */
+  themes: emerald --default;
+}
+
+body {
+  @apply bg-base-200 antialiased;
+}
