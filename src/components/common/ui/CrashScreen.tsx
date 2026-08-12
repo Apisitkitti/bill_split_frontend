@@ -11,12 +11,27 @@
 export function CrashScreen({
   error,
   componentStack,
+  fullPage = true,
 }: {
-  error: Error
+  /**
+   * Whatever was thrown, not an `Error`. React and the router both type a
+   * boundary's error as `Error`, but that is a claim about the common case, not
+   * a guarantee: `throw null` is legal JS and arrives here unchanged. This
+   * screen is the last thing standing between a crash and a blank page, so it
+   * dereferences nothing it has not narrowed.
+   */
+  error: unknown
   componentStack?: string | null
+  /** False when a layout above already fills the viewport — see `RouteCrash`. */
+  fullPage?: boolean
 }) {
+  const message = error instanceof Error ? error.message : String(error)
+  // `String(error)` rather than the message again: an Error with no `.stack`
+  // still has a name worth printing, and a thrown non-Error has nothing else.
+  const stack = error instanceof Error ? (error.stack ?? String(error)) : String(error)
+
   return (
-    <div className="min-h-dvh bg-base-200 p-4">
+    <div role="alert" className={`bg-base-200 p-4 ${fullPage ? 'min-h-dvh' : ''}`}>
       {/* The exception text is for whoever is debugging, not for the person
           holding the phone: they get a plain statement and one thing to do,
           and the raw message moves down into the details below. */}
@@ -44,9 +59,9 @@ export function CrashScreen({
         </summary>
         <div className="collapse-content">
           <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs">
-            {error.message}
+            {message}
             {'\n'}
-            {error.stack ?? String(error)}
+            {stack}
             {componentStack}
           </pre>
         </div>

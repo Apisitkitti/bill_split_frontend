@@ -6,7 +6,14 @@ interface Props {
 }
 
 interface State {
-  error: Error | null
+  /**
+   * Separate from `error` because the thrown value itself is not a reliable
+   * signal: `throw null` gives a falsy `error`, and testing that alone would
+   * make `render` hand back the children that just threw — React re-throws,
+   * and the page goes blank in exactly the case the boundary exists for.
+   */
+  crashed: boolean
+  error: unknown
   stack: string | null
 }
 
@@ -27,13 +34,13 @@ interface State {
  * `defaultErrorComponent` in `main.tsx`.
  */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, stack: null }
+  state: State = { crashed: false, error: null, stack: null }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return { error }
+  static getDerivedStateFromError(error: unknown): Partial<State> {
+    return { crashed: true, error }
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  componentDidCatch(error: unknown, info: ErrorInfo) {
     // The component stack says which component threw, which the message alone
     // usually does not.
     this.setState({ stack: info.componentStack ?? null })
@@ -41,8 +48,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
-    const { error, stack } = this.state
-    if (!error) return this.props.children
+    const { crashed, error, stack } = this.state
+    if (!crashed) return this.props.children
 
     return <CrashScreen error={error} componentStack={stack} />
   }

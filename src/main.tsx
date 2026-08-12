@@ -19,10 +19,17 @@ window.addEventListener('unhandledrejection', (event) => {
 // English panel instead of the Thai screen, with no reload button and no stack
 // to read on a phone. The ErrorBoundary below still covers RouterProvider
 // itself, which is outside anything the router can catch.
+// `defaultOnCatch` is the only place the router hands out a component stack: it
+// builds the error component with `{ error, reset }` and never passes the
+// `ErrorInfo`, so without this hook a crash inside a screen — nearly every
+// crash, now that every route has its own CatchBoundary — would log nothing at
+// all, and `componentDidCatch` below would only ever fire for the tree outside
+// the router.
 const router = createRouter({
   routeTree,
   defaultErrorComponent: RouteCrash,
   defaultNotFoundComponent: RouteNotFound,
+  defaultOnCatch: (error, info) => console.error('render crashed', error, info.componentStack),
 })
 
 declare module '@tanstack/react-router' {

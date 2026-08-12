@@ -1,9 +1,23 @@
 import type { ReactNode } from 'react'
 
-/** A single short message on an otherwise empty page. */
-export function Centered({ children }: { children: ReactNode }) {
+/**
+ * A single short message on an otherwise empty page.
+ *
+ * `fullPage` is false when something above already fills the viewport — a
+ * second `min-h-dvh` nested inside the first adds a screenful of dead scroll
+ * below the fold.
+ */
+export function Centered({
+  children,
+  fullPage = true,
+}: {
+  children: ReactNode
+  fullPage?: boolean
+}) {
   return (
-    <div className="flex min-h-dvh items-center justify-center px-6 text-center text-sm">
+    <div
+      className={`flex items-center justify-center px-6 text-center text-sm ${fullPage ? 'min-h-dvh' : 'py-10'}`}
+    >
       {children}
     </div>
   )
@@ -31,9 +45,15 @@ export function LoadingScreen() {
  * login call: knowing where "home" is belongs to the router, not to a
  * primitive that has no idea what routes exist.
  */
-export function NotFoundScreen({ onHome }: { onHome: () => void }) {
+export function NotFoundScreen({
+  onHome,
+  fullPage = true,
+}: {
+  onHome: () => void
+  fullPage?: boolean
+}) {
   return (
-    <Centered>
+    <Centered fullPage={fullPage}>
       <div className="w-full max-w-md space-y-4">
         <h1 className="text-lg font-semibold">ไม่พบหน้านี้</h1>
         <p className="text-sm text-base-content/80">ลิงก์อาจหมดอายุหรือพิมพ์ผิด</p>
