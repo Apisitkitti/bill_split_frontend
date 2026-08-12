@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { Link, useMatchRoute } from '@tanstack/react-router'
+import { Link, useMatchRoute, useNavigate } from '@tanstack/react-router'
 // `balances` is also the name of the state this holds, and `me` the name of a
 // prop it builds, so both reads are aliased here rather than renamed in the
 // service — a service function is named after the endpoint it calls.
@@ -8,7 +8,7 @@ import { listBills, type Bill } from '../../../service/bill'
 import { getGroup, type Group } from '../../../service/group'
 import { me as fetchMe, type User } from '../../../service/user'
 import { GroupContext, type GroupData } from '../../../lib/groupContext'
-import { ErrorScreen, LoadingScreen } from '../../common/ui'
+import { ErrorScreen, LoadingScreen } from '../../ui'
 
 /**
  * Loads one group and holds the screens that read it.
@@ -29,6 +29,8 @@ export function GroupLayoutUI({ groupId, children }: { groupId: string; children
   const [bills, setBills] = useState<Bill[]>([])
   const [balances, setBalances] = useState<BalancesResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const navigate = useNavigate()
 
   const refresh = useCallback(async () => {
     // The two reads are independent, so they go out together rather than
@@ -75,11 +77,31 @@ export function GroupLayoutUI({ groupId, children }: { groupId: string; children
     return () => {
       cancelled = true
     }
-  }, [groupId])
+  }, [groupId, attempt])
 
   if (!group || !me) {
-    // Before the group resolves there is no screen to put an alert on top of.
-    if (error) return <ErrorScreen message={error} />
+    // Before the group resolves there is no screen to put an alert on top of —
+    // no header, no tabs, no add button. This URL is pasteable and gets pasted,
+    // so a group you are not in has to answer with a way back rather than with
+    // an alert whose only exit is closing the LIFF window.
+    if (error) {
+      return (
+        <ErrorScreen
+          title="เปิดกลุ่มนี้ไม่ได้"
+          message={error}
+          actions={[
+            { label: 'กลับหน้าแรก', onClick: () => void navigate({ to: '/', replace: true }) },
+            {
+              label: 'ลองใหม่อีกครั้ง',
+              onClick: () => {
+                setError(null)
+                setAttempt((n) => n + 1)
+              },
+            },
+          ]}
+        />
+      )
+    }
     return <LoadingScreen />
   }
 

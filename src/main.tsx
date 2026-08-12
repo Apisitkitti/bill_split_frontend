@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import './index.css'
 import { routeTree } from './routeTree.gen'
-import { ErrorBoundary } from './components/common/ui'
+import { ErrorBoundary } from './components/ui'
 import { RouteCrash, RouteNotFound } from './components/common/RouteFallbacks'
 
 // A rejected promise nobody caught is the other way this app can fail

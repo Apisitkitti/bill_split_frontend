@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { getGroup, listGroups, type Group } from '../../service/group'
-import { ErrorScreen, LoadingScreen } from '../common/ui'
+import { ErrorScreen, LoadingScreen } from '../ui'
 
 /**
  * Which group am I looking at?
@@ -13,6 +13,10 @@ import { ErrorScreen, LoadingScreen } from '../common/ui'
 export function GroupsPageUI() {
   const [groups, setGroups] = useState<Group[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Bumping this re-runs the load. A failed picker used to be a dead end — an
+  // alert with nothing to press — and on mobile data the failure it shows is
+  // usually the one a second attempt fixes.
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -45,9 +49,27 @@ export function GroupsPageUI() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [attempt])
 
-  if (error) return <ErrorScreen message={error} />
+  if (error) {
+    return (
+      <ErrorScreen
+        title="โหลดกลุ่มไม่สำเร็จ"
+        message={error}
+        actions={[
+          {
+            label: 'ลองใหม่อีกครั้ง',
+            onClick: () => {
+              // Clear the alert first, or the skeleton renders under a failure
+              // that is no longer being tested.
+              setError(null)
+              setAttempt((n) => n + 1)
+            },
+          },
+        ]}
+      />
+    )
+  }
   if (!groups) return <LoadingScreen />
 
   return (

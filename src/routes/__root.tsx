@@ -35,10 +35,10 @@ function RootLayout() {
     // redirect re-fires every render until it lands and React gives up with
     // "Maximum update depth exceeded".
     //
-    // The redirect goes to a screen with a button, never to LINE. Calling
-    // liff.login() on the app's behalf renders and vanishes in the same frame
-    // when a session fails to stick — an invisible loop with nothing to read
-    // and nothing to press.
+    // This redirect goes to a screen with a button, never to LINE. The trip to
+    // LINE is `useLiff`'s, it has already happened by the time `needsLogin` is
+    // true, and it came back without a session — so what is left here is the
+    // one thing that is not another automatic hop.
     if (needsLogin && !atLogin) navigate({ to: '/login', replace: true })
   }, [needsLogin, atLogin, navigate])
 

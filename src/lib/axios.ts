@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import liff from '@line/liff'
+import { noteAuthedRequest, redirectToLoginOnce } from './autoLogin'
 
 /** An error carrying the HTTP status, so callers can tell 401 from 400. */
 export class ApiError extends Error {
@@ -43,19 +44,36 @@ client.interceptors.request.use((config) => {
 })
 
 /**
- * Normalises failures into ApiError.
+ * Normalises failures into ApiError, and turns a 401 into a login.
  *
  * The API answers errors with `{"error": "..."}`, which axios buries inside
  * `err.response.data`. Unwrapping it once here keeps every call site from
  * reaching through the same three levels to find out what went wrong.
+ *
+ * 401 is the invalid-token signal, and it is read here rather than at each call
+ * site: any request can be the one that discovers the token went bad, and a
+ * screen that has to remember to check the status is a screen that will forget.
+ * `redirectToLoginOnce` is what stops a page firing six requests at once — the
+ * group layout does — from turning a 401 storm into a redirect storm; only the
+ * first one leaves, and the error still propagates so a screen that survives
+ * the redirect shows the message.
  */
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Authorised traffic is flowing, so the automatic redirect is worth
+    // spending again the next time it stops.
+    noteAuthedRequest()
+    return response
+  },
   (error: unknown) => {
-    if (error instanceof ApiError) throw error
+    if (error instanceof ApiError) {
+      if (error.status === 401) redirectToLoginOnce()
+      throw error
+    }
 
     if (error instanceof AxiosError) {
       const status = error.response?.status ?? 0
+      if (status === 401) redirectToLoginOnce()
       const message =
         (error.response?.data as { error?: string } | undefined)?.error ??
         // A request that never reached the server has no status. Inside LINE's

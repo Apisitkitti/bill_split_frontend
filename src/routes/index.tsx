@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createGroup, listGroups } from '../service/group'
 import { useLiffState } from '../lib/liffContext'
-import { ErrorScreen, LoadingScreen } from '../components/common/ui'
+import { ErrorScreen, LoadingScreen } from '../components/ui'
 
 export const Route = createFileRoute('/')({
   component: EntryRoute,
@@ -22,6 +22,7 @@ function EntryRoute() {
   const liffState = useLiffState()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
 
   const { lineGroupId, needsLogin } = liffState
 
@@ -78,12 +79,32 @@ function EntryRoute() {
     return () => {
       cancelled = true
     }
-  }, [lineGroupId, needsLogin, navigate])
+  }, [lineGroupId, needsLogin, navigate, attempt])
 
   // Before a group resolves there is no screen to put an alert on top of, and a
   // failure rendered as dim text reads as "still loading" with nothing to do
-  // about it. Give it the error treatment it would get later.
-  if (error) return <ErrorScreen message={error} />
+  // about it. Give it the error treatment it would get later — with the exits,
+  // because this is the LIFF Endpoint URL and a dead end here is the whole app.
+  if (error) {
+    return (
+      <ErrorScreen
+        message={error}
+        actions={[
+          // The picker, not "home": home is this route, and sending someone
+          // back to the resolve that just failed is not an exit. /groups reads
+          // its own list, so it can still work when this one did not.
+          { label: 'ดูกลุ่มทั้งหมด', onClick: () => void navigate({ to: '/groups', replace: true }) },
+          {
+            label: 'ลองใหม่อีกครั้ง',
+            onClick: () => {
+              setError(null)
+              setAttempt((n) => n + 1)
+            },
+          },
+        ]}
+      />
+    )
+  }
 
   return <LoadingScreen />
 }

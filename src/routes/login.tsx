@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useLiffState } from '../lib/liffContext'
-import { LoadingScreen } from '../components/common/ui'
+import { LoadingScreen } from '../components/ui'
 import { LoginPageUI } from '../components/login/LoginPageUI'
 
 export const Route = createFileRoute('/login')({

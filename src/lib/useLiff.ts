@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import liff from '@line/liff'
+import { redirectToLoginOnce } from './autoLogin'
 
 export interface LiffState {
   ready: boolean
   error: string | null
   /**
-   * LIFF initialised but reports nobody signed in.
+   * LIFF initialised, reports nobody signed in, and the automatic redirect has
+   * already been spent — so this is the state that renders `LoginPageUI`.
    *
-   * The app used to call liff.login() here on its own. That is a redirect, so
-   * when a session fails to stick the screen renders and vanishes in the same
-   * frame — an invisible loop with nothing to read and nothing to press.
-   * Surfacing the state and letting the user start the redirect turns that into
-   * a screen, and gives them a way back after any failure.
+   * Arriving logged out sends the user to LINE on its own (see `autoLogin`);
+   * this flag is what is left when that trip came back without a session. It
+   * has to stay a screen with a button rather than another redirect: a second
+   * automatic hop renders and vanishes in the same frame, which is an invisible
+   * loop with nothing to read and nothing to press.
    */
   needsLogin: boolean
   /** Starts the LINE login redirect. */
@@ -60,8 +62,9 @@ function initOnce(liffId: string): Promise<void> {
 /**
  * Initialises LIFF once and reports what the environment allows.
  *
- * Login is forced when the user is not signed in: every screen in this app
- * needs an identity, so there is no useful state to show a logged-out visitor.
+ * A visitor who is not signed in is sent to LINE automatically, because every
+ * screen in this app needs an identity and there is nothing to show without
+ * one. `redirectToLoginOnce` is what makes that safe rather than a loop.
  */
 export function useLiff(liffId: string): LiffState {
   const [state, setState] = useState<LiffState>({
@@ -80,6 +83,12 @@ export function useLiff(liffId: string): LiffState {
         await initOnce(liffId)
 
         if (!liff.isLoggedIn()) {
+          // The redirect happens here, in an effect, and never in a render
+          // path. Returning without a setState leaves the loading screen up
+          // while the browser leaves for LINE; showing the login button for the
+          // one frame before that is a flash of a screen nobody can press.
+          if (redirectToLoginOnce()) return
+
           if (!cancelled) {
             setState({
               ready: false,

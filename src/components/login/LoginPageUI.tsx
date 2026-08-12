@@ -1,12 +1,16 @@
-import { Centered } from '../common/ui'
+import { Centered } from '../ui'
 
 /**
- * The one screen a logged-out person sees.
+ * The fallback for a logged-out person, not the front door.
+ *
+ * Arriving logged out redirects to LINE on its own, so most people never see
+ * this. It is what is left when that redirect came back without a session:
+ * redirecting a second time renders and vanishes in the same frame, which is an
+ * invisible loop with nothing to read and nothing to press, so the second
+ * attempt has to be a button somebody chooses to press.
  *
  * It takes the login call rather than reading LIFF itself: pressing the button
- * is the only thing this screen does, and `liff.login()` is never called on the
- * app's behalf — a redirect to LINE that renders and vanishes in the same frame
- * is an invisible loop with nothing to read and nothing to press.
+ * is the only thing this screen does.
  */
 export function LoginPageUI({ onLogin }: { onLogin: () => void }) {
   return (

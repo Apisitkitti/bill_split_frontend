@@ -131,6 +131,16 @@ Anything gated on a chat must check `group.lineGroupId` before it renders.
 `liff.getProfile()` is display only. Identity the server will act on comes from
 `/api/me`.
 
+Login is automatic: arriving logged out redirects to LINE, and so does a 401
+from any API call, since either means there is no identity to render a screen
+with. The redirect goes through `redirectToLoginOnce` in `src/lib/autoLogin.ts`
+and nowhere else. It is rationed — once per page load, once per tab session
+across a return from LINE, renewed only by an API response that came back — and
+that ration is the whole reason it is safe: an unconditional `liff.login()` on
+a logged-out session is an infinite bounce through the LINE login page, which
+this app has already shipped once. `LoginPageUI` is the fallback when the
+ration is spent, not dead code.
+
 ### React
 
 - Every effect that sets state uses the `cancelled` guard the existing effects
@@ -221,6 +231,7 @@ src/lib/                  what is genuinely a library: no screen, no feature
   axios.ts                the shared client, both interceptors, ApiError
   money.ts                satang arithmetic, mirrors the backend
   useLiff.ts              liff.init and chat context
+  autoLogin.ts            the rationed liff.login() redirect
   liffContext.ts          the one useLiff result, shared down the tree
   groupContext.ts         the loaded group the $groupId layout holds
 
@@ -230,9 +241,10 @@ src/service/              one file per API feature — see "API" above
 src/routes/               one file per URL — routing only
 
 src/components/
-  common/ui/              generic primitives, no domain knowledge,
-                          re-exported through index.ts
-  common/                 shared but domain-aware pieces (none yet)
+  ui/                     generic primitives, no domain knowledge, one
+                          component per file, re-exported through index.ts
+  common/                 shared but domain-aware or app-wired pieces —
+                          RouteFallbacks, which knows the router
   __root/                 what __root.tsx shows: RootPageUI
   login/                  LoginPageUI
   groups/                 GroupsPageUI
@@ -241,13 +253,21 @@ src/components/
   groups/$groupId/bills/new/   NewBillPageUI, AddBillForm, schema.ts
 ```
 
-Three questions decide where a component goes, in order. Does it know what a
-bill is? If not, it is `common/ui` and goes in the barrel. Is it used by more
-than one screen? If so, `common/`. Otherwise it belongs to exactly one screen,
-and lives in that screen's folder — which is why `BalancePanel` sits beside
-`BalancesPageUI` rather than in a components pile everyone edits.
+Three questions decide where a component goes, in order. Could it belong to any
+app — does it know nothing about bills, groups, LIFF or routes? Then it is `ui/`
+and goes in the barrel. Is it shared by more than one screen but tied to this
+app? Then `common/`. Otherwise it belongs to exactly one screen, and lives in
+that screen's folder — which is why `BalancePanel` sits beside `BalancesPageUI`
+rather than in a components pile everyone edits.
 
-`common/ui` is the only barrel. `src/service/` deliberately has none.
+`ui/` holds one component per file: a screen that needs `Centered` should not
+have to read the crash treatment to find it. The barrel is what keeps that from
+reaching call sites — every import stays `'…/ui'`.
+
+`ui/` is the only barrel. `common/` has none: it holds app-wired pieces that
+each have one importer, and a barrel there would re-export the router into
+whoever wanted the next thing added to it. `src/service/` deliberately has none
+either.
 
 ## Node
 
