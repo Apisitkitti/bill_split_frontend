@@ -1,4 +1,4 @@
-import { client } from './client'
+import { client } from '../lib/axios'
 import type { User } from './user'
 import type { Satang } from '../lib/money'
 
@@ -20,10 +20,17 @@ export interface BalancesResponse {
   transfers: Transfer[]
 }
 
-export const balances = (groupId: string) =>
-  client.get<BalancesResponse>(`/groups/${groupId}/balances`).then((r) => r.data)
+const groupBalancesPath = (groupId: string) => `/groups/${groupId}/balances`
+const groupSummaryPath = (groupId: string) => `/groups/${groupId}/summary`
+
+export const balances = async (groupId: string) => {
+  const response = await client.get<BalancesResponse>(groupBalancesPath(groupId))
+  return response.data
+}
 
 // The summary the bot pushes is the same settled-up view /balances returns, so
 // it belongs to balances rather than to a feature of its own.
-export const pushSummary = (groupId: string) =>
-  client.post<{ pushed: number }>(`/groups/${groupId}/summary`).then((r) => r.data)
+export const pushSummary = async (groupId: string) => {
+  const response = await client.post<{ pushed: number }>(groupSummaryPath(groupId))
+  return response.data
+}

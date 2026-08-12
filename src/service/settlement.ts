@@ -1,4 +1,4 @@
-import { client } from './client'
+import { client } from '../lib/axios'
 import type { Satang } from '../lib/money'
 
 export interface Settlement {
@@ -11,15 +11,23 @@ export interface Settlement {
   createdAt: string
 }
 
-export const listSettlements = (groupId: string) =>
-  client.get<Settlement[]>(`/groups/${groupId}/settlements`).then((r) => r.data)
+const groupSettlementsPath = (groupId: string) => `/groups/${groupId}/settlements`
 
-export const createSettlement = (
+export const listSettlements = async (groupId: string) => {
+  const response = await client.get<Settlement[]>(groupSettlementsPath(groupId))
+  return response.data
+}
+
+export const createSettlement = async (
   groupId: string,
   toUser: string,
   amount: string,
   note?: string,
-) =>
-  client
-    .post<Settlement>(`/groups/${groupId}/settlements`, { toUser, amount, note })
-    .then((r) => r.data)
+) => {
+  const response = await client.post<Settlement>(groupSettlementsPath(groupId), {
+    toUser,
+    amount,
+    note,
+  })
+  return response.data
+}

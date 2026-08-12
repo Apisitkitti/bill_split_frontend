@@ -23,7 +23,7 @@ Design for a 375px-wide screen and a thumb, not a mouse.
   in `src/lib/money.ts`, and send amounts to the API as strings via
   `toBahtString`. Never `parseFloat`, never arithmetic on a `toFixed` result.
 - **All HTTP goes through `src/service/`**, one file per feature, all sharing
-  the client in `src/service/client.ts`. No bare `fetch`, no second axios
+  the client in `src/lib/axios.ts`. No bare `fetch`, no second axios
   instance — the shared client is what attaches the ID token and normalises
   errors into `ApiError`.
 - **Show the server's error message.** `err instanceof Error ? err.message`

@@ -1,4 +1,4 @@
-import { client } from './client'
+import { client } from '../lib/axios'
 import type { Satang } from '../lib/money'
 
 export interface Share {
@@ -32,8 +32,14 @@ export interface CreateBillInput {
   shares?: string[]
 }
 
-export const listBills = (groupId: string) =>
-  client.get<Bill[]>(`/groups/${groupId}/bills`).then((r) => r.data)
+const groupBillsPath = (groupId: string) => `/groups/${groupId}/bills`
 
-export const createBill = (groupId: string, input: CreateBillInput) =>
-  client.post<Bill>(`/groups/${groupId}/bills`, input).then((r) => r.data)
+export const listBills = async (groupId: string) => {
+  const response = await client.get<Bill[]>(groupBillsPath(groupId))
+  return response.data
+}
+
+export const createBill = async (groupId: string, input: CreateBillInput) => {
+  const response = await client.post<Bill>(groupBillsPath(groupId), input)
+  return response.data
+}

@@ -73,16 +73,32 @@ pull request.
 ### API
 
 Everything goes through `src/service/`, one file per feature, each importing
-the one shared `client` from `src/service/client.ts`:
+the one shared `client` from `src/lib/axios.ts`:
 
 ```
-src/service/client.ts      the axios instance, both interceptors, ApiError
+src/lib/axios.ts           the axios instance, both interceptors, ApiError
 src/service/user.ts        me
 src/service/group.ts       listGroups, createGroup, getGroup, joinGroup
 src/service/bill.ts        listBills, createBill
 src/service/settlement.ts  listSettlements, createSettlement
 src/service/balance.ts     balances, pushSummary
 ```
+
+The client lives in `lib/` because it is plumbing, not a feature: it knows about
+tokens, timeouts and error shapes, and nothing about bills or groups. `ApiError`
+lives beside it rather than in `service/` because both interceptors construct
+it — putting it in `service/` would make the client import from the layer that
+imports the client.
+
+A path is written once, in the file that owns the feature. A fixed path is a
+constant (`const ME_PATH = '/me'`); one that needs an id is a small function
+that builds it (`const groupBillsPath = (groupId: string) => ...`). Six
+hand-written copies of `/groups/${groupId}/bills` is five chances at a typo
+nobody sees until that one endpoint is called.
+
+Service functions are `async` and end in `return response.data`, not
+`.then((r) => r.data)`. A stack trace through a `.then` chain loses the call
+site; `await` keeps it.
 
 A type lives in the file that owns it — `Group` in `group.ts`, `Bill` in
 `bill.ts` — so a screen that reads one feature imports one file. There is no
@@ -181,6 +197,19 @@ The theme is pinned to `emerald` in `src/index.css`. LINE's browser follows the
 phone's dark mode, and a bill list that flips colours mid-session reads as a
 bug.
 
+### Naming
+
+- **Constants are `CAPITAL_SNAKE_CASE`** — a module-level value fixed at
+  authoring time: `MAX_SATANG`, `SATANG_PER_BAHT`, `LIFF_ID`, `ME_PATH`. This is
+  not a rule about `const`, which this codebase uses for almost everything;
+  a computed local (`const satang = parseBaht(...)`), a component, a React
+  context, a zod schema and a function are named for what they are.
+- **`interface` names are `PascalCase`** — `Group`, `BalanceEntry`, `Props`.
+- **`enum` names are `PascalCase`, their members `CAPITAL_SNAKE_CASE`.** There
+  are no enums here yet; a union of string literals (`SplitMode`) has covered
+  every case so far and erases at compile time. The rule is written down for
+  whoever adds the first one.
+
 ### Comments
 
 Explain the non-obvious decision, not the statement.
@@ -188,14 +217,15 @@ Explain the non-obvious decision, not the statement.
 ## Layout
 
 ```
-src/lib/                  what is genuinely a library: no HTTP, no screen
+src/lib/                  what is genuinely a library: no screen, no feature
+  axios.ts                the shared client, both interceptors, ApiError
   money.ts                satang arithmetic, mirrors the backend
   useLiff.ts              liff.init and chat context
   liffContext.ts          the one useLiff result, shared down the tree
   groupContext.ts         the loaded group the $groupId layout holds
 
 src/service/              one file per API feature — see "API" above
-  client.ts user.ts group.ts bill.ts settlement.ts balance.ts
+  user.ts group.ts bill.ts settlement.ts balance.ts
 
 src/routes/               one file per URL — routing only
 
