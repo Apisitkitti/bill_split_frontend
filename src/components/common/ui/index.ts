@@ -5,4 +5,5 @@
  * living in `common/ui` rather than in the folder of the screen that uses it.
  */
 export { ErrorBoundary } from './ErrorBoundary'
-export { Centered, ErrorScreen, LoadingScreen } from './Screen'
+export { CrashScreen } from './CrashScreen'
+export { Centered, ErrorScreen, LoadingScreen, NotFoundScreen } from './Screen'
