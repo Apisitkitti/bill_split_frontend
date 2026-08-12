@@ -135,6 +135,23 @@ second regex written in the schema, or the form and the API will disagree about
 what a valid amount is. Amounts stay strings through validation — coercing to a
 number is the bug the string was there to prevent.
 
+### Routes and screens
+
+A route file owns routing and nothing else: the `Route` definition, params,
+search, redirects, and whatever it needs to decide *which* screen shows. The
+screen is a component in `src/components/`, named after the route with a `UI`
+suffix — `src/routes/login.tsx` renders `src/components/LoginPageUI.tsx`, and a
+layout route renders a `*LayoutUI.tsx`.
+
+They change for different reasons and are read by different people: a redirect
+rule and a button's contrast ratio have nothing to say to each other, and a file
+holding both gets edited by everyone. A route file should read as a short answer
+to "where does this go".
+
+A route that only redirects has no screen of its own and gets no component file
+— `src/routes/index.tsx` is the one. Falling back to `Screen.tsx` while it
+resolves is not a screen worth a file.
+
 ### Style
 
 daisyUI components (`btn`, `card`, `alert`, `badge`, `tabs`) and semantic
@@ -155,8 +172,8 @@ Explain the non-obvious decision, not the statement.
 src/lib/money.ts     satang arithmetic, mirrors the backend
 src/lib/api.ts       axios client, ID token interceptor, error normalisation
 src/lib/useLiff.ts   liff.init and chat context
-src/components/      AddBillForm, BalancePanel
-src/App.tsx          group resolution, tabs, data loading
+src/routes/          one file per URL — routing only
+src/components/      the screens those routes render, plus shared pieces
 ```
 
 ## Node

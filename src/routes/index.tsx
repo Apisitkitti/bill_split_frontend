@@ -5,15 +5,20 @@ import { useLiffState } from '../lib/liffContext'
 import { ErrorScreen, LoadingScreen } from '../components/Screen'
 
 export const Route = createFileRoute('/')({
-  component: EntryScreen,
+  component: EntryRoute,
 })
 
 /**
  * Decides where an open lands, and renders nothing of its own.
  *
  * This is also the LIFF Endpoint URL, so it is the first thing LINE loads.
+ *
+ * The only route with no `*PageUI.tsx` beside it, and deliberately so: it is a
+ * redirect, and the two things it can show while redirecting — a skeleton and a
+ * failure — are the shared `Screen` primitives every route falls back to. An
+ * empty component file here would be a file to keep in sync with nothing.
  */
-function EntryScreen() {
+function EntryRoute() {
   const liffState = useLiffState()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)

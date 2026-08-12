@@ -1,26 +1,15 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useGroupData } from '../../../../lib/groupContext'
-import { AddBillForm } from '../../../../components/form/AddBillForm'
+import { NewBillPageUI } from '../../../../components/NewBillPageUI'
 
 export const Route = createFileRoute('/groups/$groupId/bills/new')({
-  component: NewBillScreen,
+  component: NewBillRoute,
 })
 
-function NewBillScreen() {
-  const { group, me, refresh } = useGroupData()
+function NewBillRoute() {
+  const { groupId } = Route.useParams()
   const navigate = useNavigate()
 
-  return (
-    <AddBillForm
-      group={group}
-      me={me}
-      // Refresh first, navigate second. The form distinguishes a save that
-      // failed from a reload that failed, and it can only render the second
-      // message while it is still mounted.
-      onCreated={async () => {
-        await refresh()
-        await navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
-      }}
-    />
-  )
+  // Where a saved bill lands is this file's only business; the screen decides
+  // when to call it, because only the form knows the save actually got through.
+  return <NewBillPageUI onSaved={() => navigate({ to: '/groups/$groupId', params: { groupId } })} />
 }

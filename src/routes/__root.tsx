@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, createRootRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useLiff } from '../lib/useLiff'
 import { LiffContext } from '../lib/liffContext'
-import { ErrorScreen, LoadingScreen } from '../components/Screen'
+import { RootPageUI } from '../components/RootPageUI'
 
 const LIFF_ID = import.meta.env.VITE_LIFF_ID ?? ''
 
@@ -12,6 +12,10 @@ export const Route = createRootRoute({
 
 /**
  * The LIFF gate every route sits behind.
+ *
+ * This is routing, not a screen: it decides whether any route may render and
+ * where a logged-out person goes. What that person actually looks at while it
+ * decides is `RootPageUI`.
  *
  * `useLiff` is called here and nowhere else. It guards a module-level init
  * promise, and a second caller mounting alongside the first is exactly the race
@@ -38,13 +42,11 @@ function RootLayout() {
     if (needsLogin && !atLogin) navigate({ to: '/login', replace: true })
   }, [needsLogin, atLogin, navigate])
 
-  if (liffState.error) {
-    return <ErrorScreen message={`เปิดผ่าน LINE ไม่สำเร็จ: ${liffState.error}`} />
-  }
+  if (liffState.error) return <RootPageUI error={liffState.error} />
 
   // Nothing below this can render without an identity: every screen in the app
   // is somebody's group.
-  if (needsLogin ? !atLogin : !liffState.ready) return <LoadingScreen />
+  if (needsLogin ? !atLogin : !liffState.ready) return <RootPageUI />
 
   return (
     <LiffContext.Provider value={liffState}>
