@@ -1,5 +1,8 @@
 import { createContext, useContext } from 'react'
-import type { BalancesResponse, Bill, Group, User } from './api'
+import type { BalancesResponse } from '../service/balance'
+import type { Bill } from '../service/bill'
+import type { Group } from '../service/group'
+import type { User } from '../service/user'
 
 export interface GroupData {
   group: Group

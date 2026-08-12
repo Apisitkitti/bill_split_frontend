@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { GroupLayoutUI } from '../../../components/GroupLayoutUI'
+import { GroupLayoutUI } from '../../../components/groups/$groupId/GroupLayoutUI'
 
 export const Route = createFileRoute('/groups/$groupId')({
   component: GroupRoute,

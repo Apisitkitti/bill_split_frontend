@@ -1,5 +1,5 @@
-import { formatBaht } from '../lib/money'
-import { useGroupData } from '../lib/groupContext'
+import { formatBaht } from '../../../../lib/money'
+import { useGroupData } from '../../../../lib/groupContext'
 
 /** Every bill in the group, newest first as the API returns them. */
 export function BillsPageUI() {

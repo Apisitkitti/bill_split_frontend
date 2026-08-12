@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api } from '../lib/api'
+import { createGroup, listGroups } from '../service/group'
 import { useLiffState } from '../lib/liffContext'
-import { ErrorScreen, LoadingScreen } from '../components/Screen'
+import { ErrorScreen, LoadingScreen } from '../components/common/ui'
 
 export const Route = createFileRoute('/')({
   component: EntryRoute,
@@ -49,7 +49,7 @@ function EntryRoute() {
         // Opening from a LINE chat should land in that chat's group. The API
         // treats a create for a chat that already has one as a join, so this
         // single path covers both the first open and every one after it.
-        const groups = await api.listGroups()
+        const groups = await listGroups()
         // The create below is not idempotent without a lineGroupId to dedupe
         // on, so a superseded run has to stop before it, not after.
         if (cancelled) return
@@ -59,9 +59,9 @@ function EntryRoute() {
         // omitted rather than empty — a group used straight from this response
         // has a member list of none, so the add-bill form would submit zero
         // participants and could not save anything. The re-read that fixes it
-        // is the unconditional api.getGroup in the /groups/$groupId layout,
+        // is the unconditional getGroup in the /groups/$groupId layout,
         // which every route below this navigation goes through.
-        const resolved = existing ?? (await api.createGroup('กลุ่มนี้', lineGroupId))
+        const resolved = existing ?? (await createGroup('กลุ่มนี้', lineGroupId))
         if (cancelled) return
 
         await navigate({

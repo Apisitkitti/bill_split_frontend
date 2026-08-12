@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, createRootRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useLiff } from '../lib/useLiff'
 import { LiffContext } from '../lib/liffContext'
-import { RootPageUI } from '../components/RootPageUI'
+import { RootPageUI } from '../components/__root/RootPageUI'
 
 const LIFF_ID = import.meta.env.VITE_LIFF_ID ?? ''
 

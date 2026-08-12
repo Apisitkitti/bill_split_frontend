@@ -1,4 +1,4 @@
-import { Centered } from './Screen'
+import { Centered } from '../common/ui'
 
 /**
  * The one screen a logged-out person sees.

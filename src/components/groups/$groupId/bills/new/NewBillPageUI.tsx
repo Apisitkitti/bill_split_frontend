@@ -1,5 +1,5 @@
-import { useGroupData } from '../lib/groupContext'
-import { AddBillForm } from './form/AddBillForm'
+import { useGroupData } from '../../../../../lib/groupContext'
+import { AddBillForm } from './AddBillForm'
 
 /**
  * The add-bill screen: the form, plus the reload that has to happen before the

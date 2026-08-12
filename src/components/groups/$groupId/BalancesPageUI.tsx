@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { api } from '../lib/api'
-import { toBahtString } from '../lib/money'
-import { useGroupData } from '../lib/groupContext'
+import { pushSummary as pushSummaryToChat } from '../../../service/balance'
+import { createSettlement } from '../../../service/settlement'
+import { toBahtString } from '../../../lib/money'
+import { useGroupData } from '../../../lib/groupContext'
 import { BalancePanel } from './BalancePanel'
 
 /** Who owes whom, and the two actions that change it. */
@@ -15,7 +16,7 @@ export function BalancesPageUI() {
     if (settling) return
     setSettling(`${me.id}:${toUser}`)
     try {
-      await api.createSettlement(group.id, toUser, toBahtString(amountSatang))
+      await createSettlement(group.id, toUser, toBahtString(amountSatang))
       await refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'บันทึกการจ่ายไม่สำเร็จ')
@@ -30,7 +31,7 @@ export function BalancesPageUI() {
     // on mobile data must not post it twice.
     setPushing(true)
     try {
-      await api.pushSummary(group.id)
+      await pushSummaryToChat(group.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ส่งสรุปไม่สำเร็จ')
     } finally {

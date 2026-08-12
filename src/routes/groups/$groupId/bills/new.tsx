@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { NewBillPageUI } from '../../../../components/NewBillPageUI'
+import { NewBillPageUI } from '../../../../components/groups/$groupId/bills/new/NewBillPageUI'
 
 export const Route = createFileRoute('/groups/$groupId/bills/new')({
   component: NewBillRoute,

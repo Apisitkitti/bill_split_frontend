@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { api, type BalancesResponse, type Bill, type Group, type User } from '../lib/api'
-import { GroupContext, type GroupData } from '../lib/groupContext'
-import { ErrorScreen, LoadingScreen } from './Screen'
+// `balances` is also the name of the state this holds, and `me` the name of a
+// prop it builds, so both reads are aliased here rather than renamed in the
+// service — a service function is named after the endpoint it calls.
+import { balances as fetchBalances, type BalancesResponse } from '../../../service/balance'
+import { listBills, type Bill } from '../../../service/bill'
+import { getGroup, type Group } from '../../../service/group'
+import { me as fetchMe, type User } from '../../../service/user'
+import { GroupContext, type GroupData } from '../../../lib/groupContext'
+import { ErrorScreen, LoadingScreen } from '../../common/ui'
 
 /**
  * Loads one group and holds the screens that read it.
@@ -28,8 +34,8 @@ export function GroupLayoutUI({ groupId, children }: { groupId: string; children
     // The two reads are independent, so they go out together rather than
     // making the user wait for one round trip and then the next.
     const [nextBills, nextBalances] = await Promise.all([
-      api.listBills(groupId),
-      api.balances(groupId),
+      listBills(groupId),
+      fetchBalances(groupId),
     ])
     setBills(nextBills)
     setBalances(nextBalances)
@@ -47,14 +53,14 @@ export function GroupLayoutUI({ groupId, children }: { groupId: string; children
         // populated. POST /groups omits members rather than returning them
         // empty, so a group taken straight from a create has nobody in it and
         // the add-bill form would submit zero participants.
-        const [profile, target] = await Promise.all([api.me(), api.getGroup(groupId)])
+        const [profile, target] = await Promise.all([fetchMe(), getGroup(groupId)])
         if (cancelled) return
         setMe(profile)
         setGroup(target)
 
         const [nextBills, nextBalances] = await Promise.all([
-          api.listBills(groupId),
-          api.balances(groupId),
+          listBills(groupId),
+          fetchBalances(groupId),
         ])
         if (cancelled) return
         setBills(nextBills)

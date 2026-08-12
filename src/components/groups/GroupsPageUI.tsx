@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { api, type Group } from '../lib/api'
-import { ErrorScreen, LoadingScreen } from './Screen'
+import { getGroup, listGroups, type Group } from '../../service/group'
+import { ErrorScreen, LoadingScreen } from '../common/ui'
 
 /**
  * Which group am I looking at?
@@ -19,7 +19,7 @@ export function GroupsPageUI() {
 
     async function load() {
       try {
-        const list = await api.listGroups()
+        const list = await listGroups()
         if (cancelled) return
         // Names first: the list is already usable for choosing, and the counts
         // below cost one request each.
@@ -28,7 +28,7 @@ export function GroupsPageUI() {
         // GET /groups omits members, so the count is a read per group.
         // allSettled rather than all: one group that fails to expand should
         // lose its count, not the whole picker.
-        const detailed = await Promise.allSettled(list.map((g) => api.getGroup(g.id)))
+        const detailed = await Promise.allSettled(list.map((g) => getGroup(g.id)))
         if (cancelled) return
         setGroups(
           list.map((g, i) => {

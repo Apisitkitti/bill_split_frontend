@@ -1,4 +1,4 @@
-import { ErrorScreen, LoadingScreen } from './Screen'
+import { ErrorScreen, LoadingScreen } from '../common/ui'
 
 /**
  * What the app shows *instead of* a route, while the LIFF gate is deciding.
