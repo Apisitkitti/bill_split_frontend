@@ -1,0 +1,84 @@
+import { useEffect, useState } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { api } from '../lib/api'
+import { useLiffState } from '../lib/liffContext'
+import { ErrorScreen, LoadingScreen } from '../components/Screen'
+
+export const Route = createFileRoute('/')({
+  component: EntryScreen,
+})
+
+/**
+ * Decides where an open lands, and renders nothing of its own.
+ *
+ * This is also the LIFF Endpoint URL, so it is the first thing LINE loads.
+ */
+function EntryScreen() {
+  const liffState = useLiffState()
+  const navigate = useNavigate()
+  const [error, setError] = useState<string | null>(null)
+
+  const { lineGroupId, needsLogin } = liffState
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function resolve() {
+      try {
+        // The root is already redirecting to /login, and its `location` flips
+        // one commit before the matched route does — so this component gets one
+        // render on the way out. Resolving in it sends the URL to /groups, the
+        // root bounces it back to /login, and the two redirects feed each other
+        // until React gives up with "Maximum update depth exceeded".
+        if (needsLogin) return
+
+        if (!lineGroupId) {
+          // Outside a LINE chat there is no chat to bind a group to. The app
+          // used to pick groups[0] — the most recently created one — with
+          // nothing on screen saying which group that was; the picker is the
+          // answer to that, not a better guess.
+          await navigate({ to: '/groups', replace: true })
+          return
+        }
+
+        // Opening from a LINE chat should land in that chat's group. The API
+        // treats a create for a chat that already has one as a join, so this
+        // single path covers both the first open and every one after it.
+        const groups = await api.listGroups()
+        // The create below is not idempotent without a lineGroupId to dedupe
+        // on, so a superseded run has to stop before it, not after.
+        if (cancelled) return
+
+        const existing = groups.find((g) => g.lineGroupId === lineGroupId)
+        // POST /groups answers with the group's own row, and its members are
+        // omitted rather than empty — a group used straight from this response
+        // has a member list of none, so the add-bill form would submit zero
+        // participants and could not save anything. The re-read that fixes it
+        // is the unconditional api.getGroup in the /groups/$groupId layout,
+        // which every route below this navigation goes through.
+        const resolved = existing ?? (await api.createGroup('กลุ่มนี้', lineGroupId))
+        if (cancelled) return
+
+        await navigate({
+          to: '/groups/$groupId',
+          params: { groupId: resolved.id },
+          replace: true,
+        })
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'โหลดข้อมูลไม่สำเร็จ')
+      }
+    }
+
+    resolve()
+    return () => {
+      cancelled = true
+    }
+  }, [lineGroupId, needsLogin, navigate])
+
+  // Before a group resolves there is no screen to put an alert on top of, and a
+  // failure rendered as dim text reads as "still loading" with nothing to do
+  // about it. Give it the error treatment it would get later.
+  if (error) return <ErrorScreen message={error} />
+
+  return <LoadingScreen />
+}

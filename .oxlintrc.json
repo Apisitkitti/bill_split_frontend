@@ -4,5 +4,17 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      // A file-based route file exports its `Route` beside the component it
+      // renders — that is the framework's shape, not a mistake. Fast refresh
+      // still works here because the router plugin's autoCodeSplitting pulls
+      // the component into its own module at build time.
+      "files": ["src/routes/**"],
+      "rules": {
+        "react/only-export-components": "off"
+      }
+    }
+  ]
 }
