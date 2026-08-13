@@ -126,9 +126,41 @@ pull request.
 
 ### API
 
-Everything goes through `src/lib/api.ts`. No bare `fetch`, no second axios
-instance: the shared client is what attaches the LIFF ID token per request and
-normalises failures into `ApiError`.
+Everything goes through `src/service/`, one file per feature, each importing
+the one shared `client` from `src/lib/axios.ts`:
+
+```
+src/lib/axios.ts           the axios instance, both interceptors, ApiError
+src/service/user.ts        me
+src/service/group.ts       listGroups, createGroup, getGroup, joinGroup
+src/service/bill.ts        listBills, createBill
+src/service/settlement.ts  listSettlements, createSettlement
+src/service/balance.ts     balances, pushSummary
+```
+
+The client lives in `lib/` because it is plumbing, not a feature: it knows about
+tokens, timeouts and error shapes, and nothing about bills or groups. `ApiError`
+lives beside it rather than in `service/` because both interceptors construct
+it — putting it in `service/` would make the client import from the layer that
+imports the client.
+
+A path is written once, in the file that owns the feature. A fixed path is a
+constant (`const ME_PATH = '/me'`); one that needs an id is a small function
+that builds it (`const groupBillsPath = (groupId: string) => ...`). Six
+hand-written copies of `/groups/${groupId}/bills` is five chances at a typo
+nobody sees until that one endpoint is called.
+
+Service functions are `async` and end in `return response.data`, not
+`.then((r) => r.data)`. A stack trace through a `.then` chain loses the call
+site; `await` keeps it.
+
+A type lives in the file that owns it — `Group` in `group.ts`, `Bill` in
+`bill.ts` — so a screen that reads one feature imports one file. There is no
+barrel here on purpose: `index.ts` would re-export every feature into every
+importer and undo the split.
+
+No bare `fetch`, no second axios instance: the shared client is what attaches
+the LIFF ID token per request and normalises failures into `ApiError`.
 
 The token is read per request, not captured at startup — LIFF refreshes it, and
 a stale copy fails in exactly the long sessions where a user would notice.
@@ -153,6 +185,18 @@ Anything gated on a chat must check `group.lineGroupId` before it renders.
 `liff.getProfile()` is display only. Identity the server will act on comes from
 `/api/me`.
 
+Login is automatic: arriving logged out redirects to LINE, and so does a 401
+from any API call, since either means there is no identity to render a screen
+with. The **automatic** redirect goes through `redirectToLoginOnce` in
+`src/lib/autoLogin.ts` and nowhere else — the bare `liff.login()` that `useLiff`
+hands to the login button is a different thing, and needs no ration because a
+person pressing a button is not a loop. It is rationed — once per page load, once per tab session
+across a return from LINE, renewed only by an API response that came back — and
+that ration is the whole reason it is safe: an unconditional `liff.login()` on
+a logged-out session is an infinite bounce through the LINE login page, which
+this app has already shipped once. `LoginPageUI` is the fallback when the
+ration is spent, not dead code.
+
 ### React
 
 - Every effect that sets state uses the `cancelled` guard the existing effects
@@ -164,11 +208,12 @@ Anything gated on a chat must check `group.lineGroupId` before it renders.
 
 ### Forms
 
-Forms use `react-hook-form` with a `zod` schema, and live in their own folder:
+Forms use `react-hook-form` with a `zod` schema, and live beside the screen
+that renders them — a form used by one screen is part of that screen:
 
 ```
-src/components/form/AddBillForm.tsx   the component
-src/components/form/schema.ts         the zod schema + its inferred type
+src/components/groups/$groupId/bills/new/AddBillForm.tsx   the component
+src/components/groups/$groupId/bills/new/schema.ts         the zod schema + its type
 ```
 
 The schema owns the rules and the type. Export the schema and
@@ -189,6 +234,25 @@ second regex written in the schema, or the form and the API will disagree about
 what a valid amount is. Amounts stay strings through validation — coercing to a
 number is the bug the string was there to prevent.
 
+### Routes and screens
+
+A route file owns routing and nothing else: the `Route` definition, params,
+search, redirects, and whatever it needs to decide *which* screen shows. The
+screen is a component under `src/components/`, in a folder named after the
+route's path and carrying a `UI` suffix — `src/routes/login.tsx` renders
+`src/components/login/LoginPageUI.tsx`, and a layout route renders a
+`*LayoutUI.tsx`. The components tree mirrors the routes tree, `$groupId`
+segment and all.
+
+They change for different reasons and are read by different people: a redirect
+rule and a button's contrast ratio have nothing to say to each other, and a file
+holding both gets edited by everyone. A route file should read as a short answer
+to "where does this go".
+
+A route that only redirects has no screen of its own and gets no component file
+— `src/routes/index.tsx` is the one. Falling back to `Screen.tsx` while it
+resolves is not a screen worth a file.
+
 ### Style
 
 daisyUI components (`btn`, `card`, `alert`, `badge`, `tabs`) and semantic
@@ -199,6 +263,19 @@ The theme is pinned to `emerald` in `src/index.css`. LINE's browser follows the
 phone's dark mode, and a bill list that flips colours mid-session reads as a
 bug.
 
+### Naming
+
+- **Constants are `CAPITAL_SNAKE_CASE`** — a module-level value fixed at
+  authoring time: `MAX_SATANG`, `SATANG_PER_BAHT`, `LIFF_ID`, `ME_PATH`. This is
+  not a rule about `const`, which this codebase uses for almost everything;
+  a computed local (`const satang = parseBaht(...)`), a component, a React
+  context, a zod schema and a function are named for what they are.
+- **`interface` names are `PascalCase`** — `Group`, `BalanceEntry`, `Props`.
+- **`enum` names are `PascalCase`, their members `CAPITAL_SNAKE_CASE`.** There
+  are no enums here yet; a union of string literals (`SplitMode`) has covered
+  every case so far and erases at compile time. The rule is written down for
+  whoever adds the first one.
+
 ### Comments
 
 Explain the non-obvious decision, not the statement.
@@ -206,12 +283,47 @@ Explain the non-obvious decision, not the statement.
 ## Layout
 
 ```
-src/lib/money.ts     satang arithmetic, mirrors the backend
-src/lib/api.ts       axios client, ID token interceptor, error normalisation
-src/lib/useLiff.ts   liff.init and chat context
-src/components/      AddBillForm, BalancePanel
-src/App.tsx          group resolution, tabs, data loading
+src/lib/                  what is genuinely a library: no screen, no feature
+  axios.ts                the shared client, both interceptors, ApiError
+  money.ts                satang arithmetic, mirrors the backend
+  useLiff.ts              liff.init and chat context
+  autoLogin.ts            the rationed liff.login() redirect
+  liffContext.ts          the one useLiff result, shared down the tree
+  groupContext.ts         the loaded group the $groupId layout holds
+
+src/service/              one file per API feature — see "API" above
+  user.ts group.ts bill.ts settlement.ts balance.ts
+
+src/routes/               one file per URL — routing only
+
+src/components/
+  ui/                     generic primitives, no domain knowledge, one
+                          component per file, re-exported through index.ts
+  common/                 shared but domain-aware or app-wired pieces —
+                          RouteFallbacks, which knows the router
+  __root/                 what __root.tsx shows: RootPageUI
+  login/                  LoginPageUI
+  groups/                 GroupsPageUI
+  groups/$groupId/        GroupLayoutUI, BalancesPageUI, BalancePanel
+  groups/$groupId/bills/       BillsPageUI
+  groups/$groupId/bills/new/   NewBillPageUI, AddBillForm, schema.ts
 ```
+
+Three questions decide where a component goes, in order. Could it belong to any
+app — does it know nothing about bills, groups, LIFF or routes? Then it is `ui/`
+and goes in the barrel. Is it shared by more than one screen but tied to this
+app? Then `common/`. Otherwise it belongs to exactly one screen, and lives in
+that screen's folder — which is why `BalancePanel` sits beside `BalancesPageUI`
+rather than in a components pile everyone edits.
+
+`ui/` holds one component per file: a screen that needs `Centered` should not
+have to read the crash treatment to find it. The barrel is what keeps that from
+reaching call sites — every import stays `'…/ui'`.
+
+`ui/` is the only barrel. `common/` has none: it holds app-wired pieces that
+each have one importer, and a barrel there would re-export the router into
+whoever wanted the next thing added to it. `src/service/` deliberately has none
+either.
 
 ## Node
 

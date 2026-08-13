@@ -1,9 +1,16 @@
 import { defineConfig } from "vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    // Before react(): the generator has to rewrite the route files and produce
+    // src/routeTree.gen.ts before anything transforms them.
+    tanstackRouter({ target: "react", autoCodeSplitting: true }),
+    react(),
+    tailwindcss(),
+  ],
   server: {
     // LIFF loads this page inside LINE's in-app browser, which reaches the dev
     // server over a tunnel rather than through localhost.

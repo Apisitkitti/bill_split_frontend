@@ -1,5 +1,6 @@
-import type { BalancesResponse, User } from '../lib/api'
-import { formatBaht } from '../lib/money'
+import type { BalancesResponse } from '../../../service/balance'
+import type { User } from '../../../service/user'
+import { formatBaht } from '../../../lib/money'
 
 interface Props {
   data: BalancesResponse

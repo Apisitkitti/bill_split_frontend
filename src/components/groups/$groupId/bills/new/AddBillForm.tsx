@@ -1,7 +1,9 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { api, type Group, type SplitMode, type User } from '../../lib/api'
-import { formatBaht, parseBaht, toBahtString } from '../../lib/money'
+import { createBill, type SplitMode } from '../../../../../service/bill'
+import type { Group } from '../../../../../service/group'
+import type { User } from '../../../../../service/user'
+import { formatBaht, parseBaht, toBahtString } from '../../../../../lib/money'
 import { billSchema, type BillFormValues } from './schema'
 
 interface Props {
@@ -78,7 +80,7 @@ export function AddBillForm({ group, me, onCreated }: Props) {
     if (satang === null) return
 
     try {
-      await api.createBill(group.id, {
+      await createBill(group.id, {
         title: values.title,
         // The satang the preview was computed from, not the raw input: the
         // number the user agreed to and the number the server parses have to
