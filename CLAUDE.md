@@ -133,8 +133,10 @@ Anything gated on a chat must check `group.lineGroupId` before it renders.
 
 Login is automatic: arriving logged out redirects to LINE, and so does a 401
 from any API call, since either means there is no identity to render a screen
-with. The redirect goes through `redirectToLoginOnce` in `src/lib/autoLogin.ts`
-and nowhere else. It is rationed — once per page load, once per tab session
+with. The **automatic** redirect goes through `redirectToLoginOnce` in
+`src/lib/autoLogin.ts` and nowhere else — the bare `liff.login()` that `useLiff`
+hands to the login button is a different thing, and needs no ration because a
+person pressing a button is not a loop. It is rationed — once per page load, once per tab session
 across a return from LINE, renewed only by an API response that came back — and
 that ration is the whole reason it is safe: an unconditional `liff.login()` on
 a logged-out session is an infinite bounce through the LINE login page, which

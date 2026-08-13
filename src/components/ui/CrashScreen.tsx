@@ -16,9 +16,15 @@ export function CrashScreen({
   /**
    * Whatever was thrown, not an `Error`. React and the router both type a
    * boundary's error as `Error`, but that is a claim about the common case, not
-   * a guarantee: `throw null` is legal JS and arrives here unchanged. This
-   * screen is the last thing standing between a crash and a blank page, so it
-   * dereferences nothing it has not narrowed.
+   * a guarantee: `throw null` is legal JS and arrives here unchanged. The
+   * router cannot render a falsy error at all — `defaultOnCatch` in `main.tsx`
+   * replaces it with an `Error` for that reason — but that replacement is what
+   * keeps the router from looping, not a promise about what this component is
+   * handed: when React escalates a falsy throw straight to the `ErrorBoundary`
+   * above `RouterProvider`, the original `null` is what that boundary renders
+   * from, and it was measured doing exactly that. This screen is the last thing
+   * standing between a crash and a blank page, so it dereferences nothing it
+   * has not narrowed.
    */
   error: unknown
   componentStack?: string | null

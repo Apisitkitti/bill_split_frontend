@@ -24,6 +24,27 @@ import liff from '@line/liff'
  * actually came back — proof that the last redirect achieved something. That is
  * what makes the ration renewable without reopening the loop: a redirect can
  * only be spent again after a request has succeeded since the previous one.
+ *
+ * Two things about that clearing are worth knowing before changing it.
+ *
+ * Only a 2xx renews the ration, because that is the only response the success
+ * interceptor sees. A session that comes back from LINE and whose first request
+ * is a 404 — a group that was deleted, say — keeps its spent mark, so a genuine
+ * 401 later in that same tab produces no redirect at all and the person reads
+ * the API's English "invalid ID token" on an `ErrorScreen` where a silent
+ * re-login was the right answer. That is the safe direction to fail in and is
+ * left as is; it costs one confusing screen, where renewing on any response at
+ * all costs the loop this whole file exists to prevent.
+ *
+ * And the safety argument depends on a rule that lives in `../backend`, the way
+ * `money.ts` depends on `money.go`: no endpoint may answer 401 for a session
+ * while another answers 200. It holds today — one auth middleware, one token,
+ * in front of every path this app calls, and the only unauthenticated route,
+ * `/api/health`, is never called from here. If that ever stops being true the
+ * 200 clears the mark, the next 401 spends it again, and `liff.login()` on an
+ * already-logged-in session returns immediately: a tight loop with nothing on
+ * screen. Separate repos, so nothing enforces this — if the backend gains a
+ * mixed-auth endpoint, this ration needs rethinking in the same pull request.
  */
 const ATTEMPT_KEY = 'billsplit.auto-login-attempted'
 

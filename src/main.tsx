@@ -29,7 +29,30 @@ const router = createRouter({
   routeTree,
   defaultErrorComponent: RouteCrash,
   defaultNotFoundComponent: RouteNotFound,
-  defaultOnCatch: (error, info) => console.error('render crashed', error, info.componentStack),
+  defaultOnCatch: (error, info) => {
+    console.error('render crashed', error, info.componentStack)
+
+    // The router's CatchBoundary keeps whatever was thrown and renders
+    // `if (error)`, so a falsy one leaves it handing back the very children
+    // that threw. When the throw is a component's first render React notices
+    // the boundary failed to handle it and escalates to the `ErrorBoundary`
+    // above `RouterProvider`, which tracks a `crashed` flag and copes. When it
+    // is a re-render — a screen that throws once some state has arrived, which
+    // is most of them — nothing escalates: the boundary keeps handing the
+    // children back and they keep throwing. Measured in a production build at
+    // 375px with this line removed: 1084 console errors at 1.5s, 2432 at 3s,
+    // still climbing, with the crashed screen's own markup on the page and no
+    // crash screen. With it: 4, and it stops. `defaultErrorComponent` cannot
+    // reach that case at all — a falsy error never renders it.
+    //
+    // Re-throwing from `onCatch` is the one hook the router leaves open here,
+    // and the one it uses itself to hand a not-found up the tree. The
+    // replacement is truthy, so the boundary above this match — the parent
+    // route's, or this `ErrorBoundary` at the top — stores it and shows the
+    // crash screen. What was actually thrown is already in the console line
+    // above, which is the only place it was ever readable.
+    if (!error) throw new Error(`a route component threw ${JSON.stringify(error) ?? 'undefined'}`)
+  },
 })
 
 declare module '@tanstack/react-router' {
