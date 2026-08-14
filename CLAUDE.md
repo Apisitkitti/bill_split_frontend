@@ -325,6 +325,25 @@ each have one importer, and a barrel there would re-export the router into
 whoever wanted the next thing added to it. `src/service/` deliberately has none
 either.
 
+## Deploying
+
+The built SPA goes to Netlify; the Go API lives elsewhere and is reached through
+a **proxy**, not a redirect (`netlify.toml`, `status = 200`).
+
+That is what keeps `VITE_API_URL` empty. The browser only ever sees one origin,
+so CORS never enters the picture and a backend move is one line of config rather
+than an env edit, a rebuild and a LIFF console change. A 301/302 there would leak
+the backend origin to the browser and bring both problems back.
+
+Two ordering rules in that file are load-bearing and neither is obvious:
+
+- the `/api/*` proxy must come **before** the SPA catch-all, or `/api/me` is
+  answered with `index.html` — a 200 full of HTML that the axios client tries to
+  parse as JSON
+- the SPA catch-all must exist at all, because every screen is a real URL now and
+  those URLs are pasted into chats; without it a shared group link 404s at
+  Netlify's file server before the router loads
+
 ## Node
 
 Pinned to 24 in `.nvmrc`. Run `nvm use` before anything else; Vite 8 needs
