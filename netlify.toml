@@ -1,0 +1,46 @@
+# Netlify serves the built SPA. The Go API lives elsewhere and is reached
+# through the proxy below.
+
+[build]
+  command = "bun run build"
+  publish = "dist"
+
+[build.environment]
+  # .nvmrc already pins this; stating it here too means a build cannot silently
+  # pick another Node. Vite 8 needs ^20.19.0 || >=22.12.0 and fails below that
+  # with an error that does not say so.
+  NODE_VERSION = "24"
+
+# ---------------------------------------------------------------------------
+# /api is a PROXY, not a redirect.
+#
+# `status = 200` makes Netlify fetch the target and return it as this response,
+# so the browser never learns the API is on another host. That is what keeps the
+# app on one origin: `VITE_API_URL` stays empty, requests go to a relative
+# `/api`, and CORS never enters the picture — the same property the Caddy dev
+# proxy provides locally.
+#
+# A 301/302 here would leak the backend origin into the browser and bring CORS
+# back, along with an extra round trip on mobile data for every API call.
+#
+# This block MUST stay above the SPA fallback. Netlify applies the first rule
+# that matches, and the catch-all would otherwise answer /api/me with index.html
+# — a 200 full of HTML, which the axios client would try to parse as JSON.
+# ---------------------------------------------------------------------------
+[[redirects]]
+  from = "/api/*"
+  to = "https://REPLACE-WITH-BACKEND-HOST/api/:splat"
+  status = 200
+  force = true
+
+# ---------------------------------------------------------------------------
+# SPA fallback.
+#
+# Every screen has a real URL, and those URLs are meant to be pasted into LINE
+# chats. Without this, /groups/<uuid> is a 404 from Netlify's file server before
+# the router ever loads, and a shared group link is dead.
+# ---------------------------------------------------------------------------
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
